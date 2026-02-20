@@ -4,7 +4,7 @@
 > 📧 hunobas.dev@gmail.com
 
 > Monster Hunter: World를 500시간 이상 플레이하며 헌팅 액션의 손맛이 무엇인지 몸으로 익혔습니다.  
-> 그 경험을 코드로 구현하고 싶어 지원합니다.
+> 그 경험을 개발자로써 구현하고 싶어 지원합니다.
 
 ---
 
@@ -147,18 +147,6 @@ public void ChangePlayMode(IPlayMode next)
 | [목성의 노래](https://github.com/Hunobas/Song-Of-Jupitor) | Unity | 2025.06~2026.01 | 5명 | FSM, 렌더링 최적화, 셰이더, 퍼즐 로직 |
 | [My Little Puppy](https://ethereal-judo-1f1.notion.site/My-Little-Puppy-1c6486e2cdb980fcbc33f487a01bd7fc) | Unity | 2025.01~03 | 38명 | 슈퍼점프 물리, 애니메이션 버그 해결, 에디터 확장 |
 | [TOGU: Planet Survivors](https://github.com/Hunobas/Planet) | Unreal 5.4 | 2025.04~06 | 1명 | 전체 아키텍처 설계 및 구현 |
-
----
-
-## 플레이 이력
-
-| 게임 | 플레이타임 | 비고 |
-|------|------------|------|
-| Monster Hunter: World | 564h | HR 259 |
-| Monster Hunter: Wilds | 52h | |
-| God of War 시리즈 | 70h+ | |
-| Elden Ring | 40h+ | |
-| Bloodborne | 40h+ | |
 
 ---
 
