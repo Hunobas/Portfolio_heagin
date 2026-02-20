@@ -8,21 +8,13 @@
 
 ---
 
-## 해긴 지원동기
-
-<Monster Hunter: World HR 259, Monster Hunter: Wilds 52h>
-
-몬스터 헌터 시리즈를 장시간 플레이하며 느낀 건, '손맛'은 단순히 타격 이펙트가 아니라 **모션, 충돌 판정, 사운드, 카메라가 0.1초 안에 맞아떨어지는 정밀한 조율**이라는 점이었습니다.
-
-와치독스 헌팅 액션이라는 컨셉과, 무기 기반 전투 연출을 목표로 한다는 공고를 읽고 제가 플레이어로서 느꼈던 바를 개발자 관점으로 구현할 수 있는 팀이라 생각했습니다.
-
----
-
 ## 핵심 역량
 
 ### Unity 최적화
 
 **1인칭 퍼즐 게임 목성의 노래** 프로젝트에서 400만 버텍스 + 300개 머터리얼 우주 정거장 씬이 30~60 FPS로 불안정했습니다. MeshBaker 텍스처 아틀라스 + 콤바인 메쉬, 오클루전 컬링을 적용해 **배칭 2,650 → 601개, FPS 120+ 안정화**를 달성했습니다.
+
+<img width="1548" height="591" alt="최적화 전후" src="https://github.com/user-attachments/assets/6b35a453-6a45-4258-9635-3bcff6062e97" />
 
 | 지표 | Before | After |
 |------|--------|-------|
@@ -46,30 +38,53 @@
 
 ---
 
-### 셰이더 구현
-
-- [모션 벡터 없는 카메라 모션블러 셰이더 구현](https://github.com/Hunobas/Song-Of-Jupitor/tree/main#6%EF%B8%8F%E2%83%A3-%EB%AA%A8%EC%85%98%EB%B2%A1%ED%84%B0-%EC%97%86%EB%8A%94-%EC%B9%B4%EB%A9%94%EB%9D%BC-%EB%AA%A8%EC%85%98%EB%B8%94%EB%9F%AC-%EC%85%B0%EC%9D%B4%EB%8D%94-%EA%B5%AC%ED%98%84)
-- C++ 레이 트레이싱 직접 구현 [[Github]](https://github.com/Hunobas/RayTracingClass_OneWeek)
-
----
-
-### 애니메이션 & 물리 기반 전투 구현
+### 애니메이션 디버깅 & 물리 기반 액션 구현
 
 **My Little Puppy (드림모션 인턴)** 에서 루트모션 및 FSM 관련 버그 3건을 해결했습니다. 공통적으로 외부 모듈이 캐릭터 트랜스폼 업데이트를 오염시키는 패턴이었으며, 이를 바탕으로 코드 컨벤션 개선을 제안했습니다.
 
-슈퍼점프 콘텐츠 구현 시 **차징 시간 기반 높이 보간 + 런타임 커브 기반 속도 제어**를 적용해 물리적으로 자연스러운 포물선 움직임을 구현했습니다.
+이외에도 슈퍼점프 콘텐츠 구현 시 **차징 시간 기반 높이 보간 + 런타임 커브 기반 속도 제어**를 적용해 물리적으로 자연스러운 포물선 움직임을 구현했습니다.
 
 <details>
-<summary><b>루트모션 버그 사례 (3건)</b></summary>
+<summary><b>사례 1: 루트모션 회전이 프레임 컨디션에 따라 달라지는 문제</b></summary>
 
-**사례 1 — 루트모션 회전이 프레임 컨디션에 따라 달라지는 문제**  
-루트모션 각도와 `ActorPosDir` 보간이 중복 적용되고 있었음. 루트모션 전용 위치/각도 업데이트 메서드를 분리하여 해결.
+| 문제 상태 | 정상 상태 |
+|------|---------|
+| ![ezgif com-video-to-gif-converter (4)](https://github.com/user-attachments/assets/c038982c-4e66-4c04-a3c1-a4878d3d48c5) | ![ezgif com-video-to-gif-converter (5)](https://github.com/user-attachments/assets/f0d4974a-a54d-4b7d-870c-e7b6ad794d5c) |
 
-**사례 2 — 루트모션 종료 시 앞으로 튀어나가는 문제**  
-Walk → RootMotion → Idle 전환 시, Walk 상태의 속도값이 초기화되지 않고 Idle까지 전달됨. 루트모션 상태머신 종료 시점에 블렌딩 속도를 0으로 초기화하여 해결.
+**증상:** 게임 FPS가 낮으면 정상 회전, 정상 FPS에서는 회전이 중간에 멈춤
 
-**사례 3 — 컷씬 일시정지 시 NPC 위치가 튀는 문제**  
-PlayableDirector가 액터 위치를 직접 수정하는데, 일시정지 모드에서 LateUpdate 재조정이 누락됨. 이전 모드가 컷씬이면 `HandleGameActors()` 호출하도록 처리.
+**원인 추적:**
+1. 소수점 오차 가설 → 검증 결과 0.1도 미만으로 육안 차이와 무관
+2. `ActorPosDir` 내부에 목표 각도로 선형 보간하는 로직 발견
+3. 루트모션 각도와 `ActorPosDir` 보간이 중복 적용되고 있었음
+
+**해결:** 루트모션 전용 위치/각도 업데이트 메서드를 분리하여 외부 보간 로직 제외
+
+</details>
+
+<details>
+<summary><b>사례 2: 루트모션 종료 시 앞으로 튀어나가는 문제</b></summary>
+
+| 문제 상태 | 정상 상태 |
+|------|---------|
+| ![02_-ezgif com-video-to-gif-converter (3)](https://github.com/user-attachments/assets/4e19abda-d7a0-41ea-a84e-c6ffce35ca67) | ![02_-ezgif com-video-to-gif-converter (4)](https://github.com/user-attachments/assets/53eb6482-83c2-4f4d-bbe5-2e215c2b7f15) |
+
+**원인:** Walk → RootMotion → Idle 전환 시, Walk 상태의 `WalkToIdle` 속도값이 초기화되지 않고 Idle까지 전달됨
+
+**해결:** 루트모션 상태머신 종료 시점에 Idle 블렌딩 속도를 0으로 초기화
+
+</details>
+
+<details>
+<summary><b>사례 3: 컷씬 일시정지 시 NPC 위치가 튀는 문제</b></summary>
+
+| 문제 상태 | 정상 상태 |
+|------|---------|
+| ![PlayableDirector_-ezgif com-video-to-gif-converter (1)](https://github.com/user-attachments/assets/436f5f08-5091-4b73-bb91-3871885ca447) | ![ezgif com-video-to-gif-converter (6)](https://github.com/user-attachments/assets/9bb6594b-afca-43f8-b29a-31fe61e320e3) |
+
+**원인:** PlayableDirector가 액터 위치를 직접 수정하는데, 컷씬 모드는 `LateUpdate`에서 위치를 재조정하지만 일시정지 모드는 이 처리가 없었음
+
+**해결:** 일시정지 모드에서도 이전 모드가 컷씬이면 `HandleGameActors()` 호출
 
 </details>
 
@@ -77,17 +92,51 @@ PlayableDirector가 액터 위치를 직접 수정하는데, 일시정지 모드
 
 ### FSM 아키텍처 설계
 
-**목성의 노래** 에서 플레이 모드 전환(탐색 / 퍼즐 / 컷씬 / 일시정지)을 FSM으로 설계했습니다. 상태 간 진입/이탈 조건을 명확히 분리해 컷씬 일시정지 버그 등을 구조적으로 해결했습니다.
+**문제:** 5가지 플레이 모드(Normal/Panel/Cinema/Dialog/Pause)가 상호배타적이어야 하는데, 패널을 여는 도중 컷씬이 재생되면 컷씬이 끝나도 **조작 불가 상태**가 되는 치명적 버그 발생. 상태 관련 코드가 여러 파일에 분산되어 디버깅 평균 **60분 소요**.
 
----
+![GameState 버그 영상](https://github.com/user-attachments/assets/fa973d2f-df58-483d-ae3b-05d5104e9bc6)
 
-## 팀 프로젝트 경험
+*패널 모드 진입 중 시네마 모드가 끼어들면 발생하는 조작 불가 문제*
 
-**My Little Puppy (드림모션, 3개월 인턴)**  
-38인 팀에서 스팀 데모 빌드를 11개 국어로 출시했습니다. QA 테스트 15회 진행, 버그/폴리싱 103건 제보, 주요 버그 11건 해결했습니다. 기획자용 작업 가이드 문서 2건을 작성해 협업 효율을 높였습니다.
+**해결:** 중앙 집중식 FSM으로 모든 플레이 모드를 단일 책임 관리.
+```csharp
+public void ChangePlayMode(IPlayMode next)
+{
+    if (next == null || ReferenceEquals(_activeMode, next)) return;
 
-- [신규 무기/아이템 추가 가이드](https://ethereal-judo-1f1.notion.site/223486e2cdb980c5a807f920ebad70a6)
-- [신규 몬스터 추가 가이드](https://ethereal-judo-1f1.notion.site/223486e2cdb98001869cef28bb9bfbb5)
+    // 시네마 모드는 일시정지 이외 모든 전환 요청 무시
+    if (IsPlayingCinema && !ReferenceEquals(next, PauseMode)) return;
+
+    // 패널 모드 강제 종료 후 전환
+    if (IsOperatingPanel && PanelMode.Controller != null)
+        PanelMode.Controller.EndPanelForcely();
+
+    var prev = _activeMode;
+    prev?.OnExit(next);
+    _activeMode = next;
+    _activeMode.OnEnter(prev);
+    InputManager.Instance?.UpdateCursorLock();
+}
+```
+
+각 모드의 `OnExit` 훅이 UI 상태·입력 바인딩·커서 잠금을 자동으로 정리하므로, 호출부에서 정리 로직을 신경 쓸 필요 없습니다.
+
+| 개선 항목 | Before | After |
+|---------|--------|-------|
+| 상태 충돌 버그 | 주 2~3건 | **0건** |
+| 디버깅 소요 시간 | 평균 60분 | 평균 30분 |
+| 신규 모드 추가 | - | `IPlayMode` 구현만으로 20분 이내 |
+
+📂 [GameState.cs 전체 코드](https://github.com/Hunobas/Song-Of-Jupitor/blob/7386ab978fc3115a13a700758c7a618567bc168a/Scripts/System/GameState.cs#L15)
+
+<details>
+<summary><b>엣지 케이스 처리: 일시정지 해제 시 이전 모드 복구 / 시네마 중 다이얼로그 전환 방지</b></summary>
+
+- `PauseMode`가 `prevMode`를 저장하고 자체 `Resume()` 메서드로 복구 — [코드 보기](https://github.com/Hunobas/Song-Of-Jupitor/blob/7386ab978fc3115a13a700758c7a618567bc168a/Scripts/System/PauseMode.cs#L34)
+- 시네마 모드는 `TimelineController`에서 자체적으로 종료, `ChangePlayMode`의 가드 조건이 외부 중단 차단 — [코드 보기](https://github.com/Hunobas/Song-Of-Jupitor/blob/7386ab978fc3115a13a700758c7a618567bc168a/Scripts/System/CinemaMode.cs#L27)
+
+</details>
+
 
 ---
 
